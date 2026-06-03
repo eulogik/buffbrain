@@ -47,12 +47,6 @@ On-device semantic search. AI-powered classification. Blazingly fast native perf
 
 ---
 
-<p align="center">
-  <img src="docs/screenshots/main-window.png" alt="BuffBrain Screenshot" width="720">
-  <br>
-  <em>BuffBrain — clipboard history with on-device semantic search</em>
-</p>
-
 ---
 
 ## ✦ Features
