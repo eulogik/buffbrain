@@ -18,6 +18,33 @@ On-device semantic search. AI-powered classification. Blazingly fast native perf
   <a href="#-build-from-source">Build</a>
 </p>
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/license-MIT-blue?style=flat-square&labelColor=1a1a1a">
+    <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/macOS-10.15+-brightgreen?style=flat-square&labelColor=1a1a1a">
+    <img alt="macOS 10.15+" src="https://img.shields.io/badge/macOS-10.15+-brightgreen?style=flat-square">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Rust-1.85+-orange?style=flat-square&logo=rust&labelColor=1a1a1a">
+    <img alt="Rust 1.85+" src="https://img.shields.io/badge/Rust-1.85+-orange?style=flat-square&logo=rust">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&labelColor=1a1a1a">
+    <img alt="React 19" src="https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Tauri-2-purple?style=flat-square&logo=tauri&labelColor=1a1a1a">
+    <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-purple?style=flat-square&logo=tauri">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/built_by-Eulogik-8a5cf5?style=flat-square&labelColor=1a1a1a">
+    <img alt="Built by Eulogik" src="https://img.shields.io/badge/built_by-Eulogik-8a5cf5?style=flat-square">
+  </picture>
+</p>
+
 ---
 
 ## ✦ Features
@@ -257,12 +284,14 @@ The source logo (`src-tauri/icons/buffbrain-logo.png`) is the single source of t
 
 ## ✦ License
 
-MIT © BuffBrain
+MIT © BuffBrain — an open source project by [Eulogik](https://eulogik.com).
 
 ---
 
 <p align="center">
   <sub>Built with ❤️ using Rust, React, and ONNX Runtime.</sub>
+  <br>
+  <sub>BuffBrain is crafted by <a href="https://eulogik.com">Eulogik</a> — we build tools that think.</sub>
   <br>
   <sub>BuffBrain — the clipboard manager that actually understands what you copied.</sub>
 </p>
