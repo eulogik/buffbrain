@@ -4,6 +4,7 @@ import type { Clip, AppConfig, Theme } from './types';
 
 export const api = {
   getClips: () => invoke<Clip[]>('get_clips'),
+  semanticSearch: (query: string) => invoke<Clip[]>('semantic_search', { query }),
   insertClip: (content: string, source: string | null) =>
     invoke<Clip>('insert_clip', { content, source }),
   insertImageClip: (thumbnail: string, source: string | null) =>

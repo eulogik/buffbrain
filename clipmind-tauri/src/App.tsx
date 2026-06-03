@@ -15,6 +15,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [view, setView] = useState<View>('main');
+  const [semanticMode, setSemanticMode] = useState(false);
   const debounceRef = useRef<number | null>(null);
 
   const refresh = useCallback(async () => {
@@ -63,8 +64,20 @@ function App() {
     });
   }, []);
 
-  const filtered = clips.filter((c) => {
-    if (debouncedQuery) {
+  const [semanticResults, setSemanticResults] = useState<Clip[] | null>(null);
+
+  useEffect(() => {
+    if (semanticMode && debouncedQuery) {
+      api.semanticSearch(debouncedQuery).then(setSemanticResults).catch(() => setSemanticResults(null));
+    } else {
+      setSemanticResults(null);
+    }
+  }, [semanticMode, debouncedQuery]);
+
+  const baseClips = semanticMode && semanticResults ? semanticResults : clips;
+
+  const filtered = baseClips.filter((c) => {
+    if (!semanticMode && debouncedQuery) {
       if (!c.content.toLowerCase().includes(debouncedQuery.toLowerCase())) return false;
     }
     if (activeTab === 'code') return c.type === 'code';
@@ -72,6 +85,10 @@ function App() {
     if (activeTab === 'other') return c.type === 'text' || c.type === 'image';
     return true;
   });
+
+  if (semanticMode && semanticResults) {
+    filtered.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  }
 
   const selected = filtered.find((c) => c.id === selectedId) || filtered[0] || null;
 
@@ -163,6 +180,8 @@ function App() {
         onTabChange={setActiveTab}
         count={clips.length}
         onSettingsClick={() => setView('settings')}
+        semanticMode={semanticMode}
+        onSemanticToggle={() => setSemanticMode((m) => !m)}
       />
       <div className="content">
         <div className="list-pane">

@@ -9,6 +9,8 @@ type Props = {
   onTabChange: (tab: TabId) => void;
   count: number;
   onSettingsClick: () => void;
+  semanticMode: boolean;
+  onSemanticToggle: () => void;
 };
 
 const tabIcon = (icon: 'all' | 'code' | 'link' | 'other') => {
@@ -19,7 +21,7 @@ const tabIcon = (icon: 'all' | 'code' | 'link' | 'other') => {
   return <OtherIcon {...props} />;
 };
 
-export const SearchBar = ({ query, onQueryChange, activeTab, onTabChange, count, onSettingsClick }: Props) => {
+export const SearchBar = ({ query, onQueryChange, activeTab, onTabChange, count, onSettingsClick, semanticMode, onSemanticToggle }: Props) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -58,6 +60,13 @@ export const SearchBar = ({ query, onQueryChange, activeTab, onTabChange, count,
         />
         <div className="search-right">
           {count > 0 && <span className="clip-count-badge">{count} clip{count !== 1 ? 's' : ''}</span>}
+          <button
+            className={`semantic-toggle ${semanticMode ? 'active' : ''}`}
+            onClick={onSemanticToggle}
+            title={semanticMode ? 'Semantic search on' : 'Semantic search off'}
+          >
+            <span style={{ fontSize: 13 }}>{semanticMode ? '✨' : '🔍'}</span>
+          </button>
           <div className="kbd-hint">
             <kbd>⌘</kbd><kbd>⇧</kbd><kbd>V</kbd>
           </div>

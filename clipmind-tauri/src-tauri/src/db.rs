@@ -53,6 +53,7 @@ impl Database {
         // Ensure columns exist (migration safety)
         let _ = conn.execute("ALTER TABLE clips ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0", []);
         let _ = conn.execute("ALTER TABLE clips ADD COLUMN thumbnail TEXT", []);
+        let _ = conn.execute("ALTER TABLE clips ADD COLUMN embedding BLOB", []);
 
         Ok(())
     }
@@ -63,12 +64,14 @@ impl Database {
         clip_type: ClipType,
         source: Option<&str>,
         thumbnail: Option<&str>,
+        embedding: Option<&[f32]>,
     ) -> Result<Clip> {
         let now = chrono_now();
         let conn = self.conn.lock();
+        let embedding_blob = embedding.map(embedding_to_blob);
         conn.execute(
-            "INSERT INTO clips (content, type, source, created_at, pinned, thumbnail) VALUES (?, ?, ?, ?, 0, ?)",
-            params![content, clip_type_to_str(&clip_type), source, now, thumbnail],
+            "INSERT INTO clips (content, type, source, created_at, pinned, thumbnail, embedding) VALUES (?, ?, ?, ?, 0, ?, ?)",
+            params![content, clip_type_to_str(&clip_type), source, now, thumbnail, embedding_blob],
         )?;
         let id = conn.last_insert_rowid();
         Ok(Clip {
@@ -79,6 +82,7 @@ impl Database {
             created_at: now,
             pinned: false,
             thumbnail: thumbnail.map(String::from),
+            score: None,
         })
     }
 
@@ -101,6 +105,7 @@ impl Database {
                         v != 0
                     },
                     thumbnail: row.get(6)?,
+                    score: None,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -123,6 +128,7 @@ impl Database {
                 created_at: row.get(4)?,
                 pinned: { let v: i64 = row.get(5)?; v != 0 },
                 thumbnail: row.get(6)?,
+                score: None,
             }))
         } else {
             Ok(None)
@@ -180,6 +186,72 @@ impl Database {
             Ok(None)
         }
     }
+
+    pub fn semantic_search(&self, query_embedding: &[f32], max_results: usize) -> Result<Vec<Clip>> {
+        let conn = self.conn.lock();
+        search_semantic(&conn, query_embedding, max_results)
+    }
+}
+
+pub fn search_semantic(
+    conn: &Connection,
+    query_embedding: &[f32],
+    max_results: usize,
+) -> Result<Vec<Clip>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, content, type, source, created_at, pinned, thumbnail, embedding FROM clips WHERE embedding IS NOT NULL ORDER BY pinned DESC, created_at DESC",
+    )?;
+
+    let mut scored: Vec<Clip> = stmt
+        .query_map([], |row| {
+            let embedding_blob: Vec<u8> = row.get(7)?;
+            let emb = embedding_from_blob(&embedding_blob);
+            let type_str: String = row.get(2)?;
+            Ok((emb, Clip {
+                id: row.get(0)?,
+                content: row.get(1)?,
+                clip_type: parse_clip_type(&type_str),
+                source: row.get(3)?,
+                created_at: row.get(4)?,
+                pinned: { let v: i64 = row.get(5)?; v != 0 },
+                thumbnail: row.get(6)?,
+                score: None,
+            }))
+        })?
+        .filter_map(|r| r.ok())
+        .map(|(emb, mut clip)| {
+            let sim = cosine_similarity(query_embedding, &emb);
+            clip.score = Some(sim);
+            clip
+        })
+        .collect();
+
+    scored.sort_by(|a, b| {
+        let pinned_cmp = (b.pinned as i8).cmp(&(a.pinned as i8));
+        if pinned_cmp != std::cmp::Ordering::Equal {
+            return pinned_cmp;
+        }
+        b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    scored.truncate(max_results);
+    Ok(scored)
+}
+
+fn embedding_to_blob(emb: &[f32]) -> Vec<u8> {
+    emb.iter()
+        .flat_map(|v| v.to_ne_bytes())
+        .collect()
+}
+
+fn embedding_from_blob(blob: &[u8]) -> Vec<f32> {
+    blob.chunks_exact(4)
+        .map(|c| f32::from_ne_bytes([c[0], c[1], c[2], c[3]]))
+        .collect()
+}
+
+fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
 }
 
 fn clip_type_to_str(t: &ClipType) -> &'static str {

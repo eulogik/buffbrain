@@ -258,6 +258,32 @@ body {
   transform: scale(0.90);
 }
 
+.semantic-toggle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.semantic-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0.8;
+}
+
+.semantic-toggle.active {
+  opacity: 1;
+  background: rgba(10, 132, 255, 0.12);
+  box-shadow: 0 0 0 0.5px rgba(10, 132, 255, 0.20);
+}
+
 /* ─── Content area ─── */
 .content {
   flex: 1;

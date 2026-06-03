@@ -2,6 +2,7 @@ mod ai;
 mod clipboard;
 mod commands;
 mod db;
+mod embed;
 mod storage;
 mod types;
 
@@ -9,6 +10,7 @@ use crate::ai::AiClient;
 use crate::clipboard::ClipboardWatcher;
 use crate::commands::AppState;
 use crate::db::Database;
+use crate::embed::Embedder;
 use crate::storage::SecureStore;
 use std::sync::Arc;
 use tauri::{
@@ -43,10 +45,24 @@ pub fn run() {
                 *ai.blocking_lock() = Some(AiClient::new(key));
             }
 
+            let resource_dir = app.path().resource_dir().expect("no resource dir");
+            let model_dir = resource_dir.join("resources");
+            let embedder = match Embedder::new(&model_dir) {
+                Ok(e) => {
+                    eprintln!("[embed] model loaded successfully");
+                    Some(Arc::new(e))
+                }
+                Err(e) => {
+                    eprintln!("[embed] failed to load model: {e}");
+                    None
+                }
+            };
+
             let state = AppState {
                 db: database.clone(),
                 store: store.clone(),
                 ai: ai.clone(),
+                embedder,
                 data_dir: data_dir.clone(),
             };
             app.manage(state);
@@ -156,6 +172,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_clips,
+            commands::semantic_search,
             commands::insert_clip,
             commands::insert_image_clip,
             commands::toggle_pin,

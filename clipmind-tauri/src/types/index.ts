@@ -8,6 +8,7 @@ export interface Clip {
   created_at: number;
   pinned: boolean;
   thumbnail: string | null;
+  score?: number | null;
 }
 
 export type TabId = 'all' | 'code' | 'links' | 'other';

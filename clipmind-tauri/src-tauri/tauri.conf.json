@@ -51,6 +51,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": ["resources/*"],
     "macOS": {
       "minimumSystemVersion": "10.15"
     }

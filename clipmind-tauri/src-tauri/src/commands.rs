@@ -1,5 +1,6 @@
 use crate::ai::AiClient;
 use crate::db::{detect_type, Database};
+use crate::embed::Embedder;
 use crate::storage::SecureStore;
 use crate::types::{AppConfig, Clip, ClipType, Theme};
 use std::path::PathBuf;
@@ -12,12 +13,29 @@ pub struct AppState {
     pub db: Arc<Database>,
     pub store: Arc<SecureStore>,
     pub ai: Arc<AsyncMutex<Option<AiClient>>>,
+    pub embedder: Option<Arc<Embedder>>,
     pub data_dir: PathBuf,
 }
 
 #[tauri::command]
 pub async fn get_clips(state: State<'_, AppState>) -> Result<Vec<Clip>, String> {
     state.db.get_clips().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn semantic_search(
+    state: State<'_, AppState>,
+    query: String,
+) -> Result<Vec<Clip>, String> {
+    let embedder = state
+        .embedder
+        .as_ref()
+        .ok_or_else(|| "Embedding model not loaded".to_string())?;
+    let query_embedding = embedder.embed(&query).map_err(|e| e.to_string())?;
+    state
+        .db
+        .semantic_search(&query_embedding, 100)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -28,9 +46,18 @@ pub async fn insert_clip(
 ) -> Result<Clip, String> {
     let kind = detect_type(&content);
     let kind_str = clip_type_to_str(&kind);
+
+    let embedding = state.embedder.as_ref().and_then(|e| {
+        if kind != ClipType::Image {
+            e.embed(&content).ok()
+        } else {
+            None
+        }
+    });
+
     let clip = state
         .db
-        .insert_clip(&content, kind, source.as_deref(), None)
+        .insert_clip(&content, kind, source.as_deref(), None, embedding.as_deref())
         .map_err(|e| e.to_string())?;
     if let Some(ai) = state.ai.lock().await.as_ref() {
         if let Ok(refined) = ai.categorize(&content).await {
@@ -51,7 +78,7 @@ pub async fn insert_image_clip(
     let placeholder = format!("[Image {} bytes]", thumbnail.len());
     state
         .db
-        .insert_clip(&placeholder, ClipType::Image, source.as_deref(), Some(&thumbnail))
+        .insert_clip(&placeholder, ClipType::Image, source.as_deref(), Some(&thumbnail), None)
         .map_err(|e| e.to_string())
 }
 
@@ -260,6 +287,7 @@ fn state_get<R: Runtime>(app: &AppHandle<R>) -> Arc<AppState> {
         db: state.db.clone(),
         store: state.store.clone(),
         ai: state.ai.clone(),
+        embedder: state.embedder.clone(),
         data_dir: state.data_dir.clone(),
     })
 }

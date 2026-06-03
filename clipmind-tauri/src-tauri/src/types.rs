@@ -19,6 +19,7 @@ pub struct Clip {
     pub created_at: i64,
     pub pinned: bool,
     pub thumbnail: Option<String>,
+    pub score: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
