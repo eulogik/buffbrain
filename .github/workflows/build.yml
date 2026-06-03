@@ -73,9 +73,12 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
 
-      - name: Build
+      - name: Build frontend
         shell: bash
-        run: npm run tauri build -- --bundles ${{ matrix.bundle }}
+        run: npm run build
+      - name: Build Tauri bundle
+        shell: bash
+        run: npm run tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
