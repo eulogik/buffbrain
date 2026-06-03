@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BuffBrain — The clipboard manager with a brain</title>
+  <meta name="description" content="On-device semantic search. AI-powered classification. Blazingly fast native performance. BuffBrain is the clipboard manager that actually understands what you copied.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --blue: #0a84ff;
+      --purple: #8a5cf5;
+      --bg: #0d0d12;
+      --surface: #15151e;
+      --card: #1a1a26;
+      --border: #252535;
+      --text: #e8e8f0;
+      --muted: #8888a0;
+      --glow-blue: rgba(10, 132, 255, 0.15);
+      --glow-purple: rgba(138, 92, 245, 0.15);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    ::selection { background: var(--purple); color: #fff; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    img { max-width: 100%; }
+
+    /* ─── Navigation ─── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 16px 32px;
+      background: rgba(13, 13, 18, 0.8);
+      backdrop-filter: blur(20px) saturate(1.5);
+      -webkit-backdrop-filter: blur(20px) saturate(1.5);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    nav .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 600; font-size: 18px;
+    }
+    nav .logo img { width: 28px; height: 28px; border-radius: 6px; }
+    nav .links { display: flex; gap: 24px; align-items: center; }
+    nav .links a { color: var(--muted); font-size: 14px; font-weight: 500; transition: color .2s; }
+    nav .links a:hover { color: var(--text); text-decoration: none; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border-radius: 10px;
+      font-size: 14px; font-weight: 600; border: none; cursor: pointer;
+      transition: all .25s; text-decoration: none !important;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      color: #fff;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 24px var(--glow-purple); }
+    .btn-outline {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--blue); }
+
+    /* ─── Hero ─── */
+    .hero {
+      min-height: 90vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 120px 24px 80px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -40%; left: -20%;
+      width: 140%; height: 140%;
+      background: radial-gradient(ellipse 60% 50% at 50% 40%, var(--glow-blue) 0%, transparent 70%),
+                  radial-gradient(ellipse 50% 40% at 50% 60%, var(--glow-purple) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-icon {
+      width: 88px; height: 88px; border-radius: 22px;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px; font-family: 'Times New Roman', serif; font-style: italic;
+      color: #fff; margin-bottom: 28px;
+      box-shadow: 0 8px 48px var(--glow-purple);
+      position: relative; z-index: 1;
+    }
+    .hero h1 {
+      font-size: clamp(40px, 7vw, 72px); font-weight: 700; letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #fff 40%, var(--blue), var(--purple));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      position: relative; z-index: 1;
+    }
+    .hero p {
+      font-size: 18px; color: var(--muted); max-width: 580px; margin-top: 16px;
+      position: relative; z-index: 1;
+    }
+    .hero .cta-row {
+      display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; justify-content: center;
+      position: relative; z-index: 1;
+    }
+    .hero .badge-row {
+      display: flex; gap: 8px; margin-top: 28px; flex-wrap: wrap; justify-content: center;
+      position: relative; z-index: 1;
+    }
+    .hero .badge-row span {
+      padding: 4px 12px; border-radius: 20px;
+      background: var(--card); border: 1px solid var(--border);
+      font-size: 12px; color: var(--muted);
+    }
+
+    /* ─── Sections ─── */
+    section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
+    section h2 {
+      font-size: 32px; font-weight: 700; letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+    section .subtitle {
+      color: var(--muted); font-size: 16px; max-width: 560px; margin-bottom: 48px;
+    }
+
+    /* ─── Features Grid ─── */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .feature-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 24px; transition: all .3s;
+    }
+    .feature-card:hover {
+      border-color: var(--purple); transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .feature-card .icon { font-size: 28px; margin-bottom: 12px; }
+    .feature-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .feature-card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    /* ─── Semantic Search Deep Dive ─── */
+    .semantic-section {
+      background: linear-gradient(180deg, var(--bg) 0%, var(--surface) 100%);
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      max-width: 100%; padding: 80px 24px;
+    }
+    .semantic-section .inner {
+      max-width: 1100px; margin: 0 auto;
+    }
+    .pipeline {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      margin: 32px 0; padding: 20px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 14px;
+    }
+    .pipeline .step {
+      padding: 8px 16px; border-radius: 8px;
+      background: rgba(138, 92, 245, 0.1); border: 1px solid rgba(138, 92, 245, 0.2);
+      font-size: 13px; font-weight: 500; white-space: nowrap;
+    }
+    .pipeline .arrow { color: var(--muted); font-size: 16px; }
+
+    /* ─── Comparison Table ─── */
+    .comparison-wrap { overflow-x: auto; border-radius: 16px; border: 1px solid var(--border); }
+    table.comparison {
+      width: 100%; border-collapse: collapse; font-size: 14px;
+    }
+    table.comparison th {
+      background: var(--card); padding: 14px 16px; text-align: left;
+      font-weight: 600; white-space: nowrap; border-bottom: 1px solid var(--border);
+    }
+    table.comparison th:first-child { border-radius: 0; }
+    table.comparison td {
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      color: var(--muted); vertical-align: middle;
+    }
+    table.comparison td:first-child { font-weight: 500; color: var(--text); }
+    table.comparison tr:last-child td { border-bottom: none; }
+    table.comparison tr:hover td { background: rgba(138, 92, 245, 0.04); }
+    .check { color: #34c759; }
+    .x { color: #555; }
+    .star { color: var(--purple); }
+
+    /* ─── Architecture ─── */
+    .arch-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px; margin-top: 24px;
+    }
+    .arch-item {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 18px; text-align: center;
+    }
+    .arch-item .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    .arch-item .value { font-size: 13px; font-weight: 600; margin-top: 4px; }
+
+    /* ─── CTA ─── */
+    .cta-section {
+      text-align: center; padding: 80px 24px;
+      position: relative;
+    }
+    .cta-section::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse 50% 60% at 50% 50%, var(--glow-blue) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-section h2 { position: relative; z-index: 1; }
+    .cta-section p { color: var(--muted); max-width: 480px; margin: 8px auto 32px; position: relative; z-index: 1; }
+    .cta-section .cta-row { position: relative; z-index: 1; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* ─── Footer ─── */
+    footer {
+      text-align: center; padding: 32px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted); font-size: 13px;
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+
+    /* ─── Animations ─── */
+    .fade-in { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 600px) {
+      nav .links a:not(.btn) { display: none; }
+      .hero h1 { font-size: 32px; }
+      section h2 { font-size: 24px; }
+      .features-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <div class="logo">
+    <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Times New Roman',serif;font-style:italic;font-size:18px;font-weight:700;">b</div>
+    BuffBrain
+  </div>
+  <div class="links">
+    <a href="#features">Features</a>
+    <a href="#semantic">AI Search</a>
+    <a href="#compare">Compare</a>
+    <a href="#build">Build</a>
+    <a href="https://github.com/eulogik/buffbrain" class="btn btn-outline" style="padding:6px 14px;font-size:13px;">GitHub</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-icon">b</div>
+  <h1>Your clipboard,<br>but smarter.</h1>
+  <p>BuffBrain remembers what you copied — and understands what it means. On-device semantic search finds the clip you're looking for, even when you don't remember the exact words.</p>
+  <div class="cta-row">
+    <a href="#build" class="btn btn-primary">Download for macOS</a>
+    <a href="https://github.com/eulogik/buffbrain" class="btn btn-outline">View on GitHub</a>
+  </div>
+  <div class="badge-row">
+    <span>🧠 On-device AI</span>
+    <span>🔒 Zero telemetry</span>
+    <span>⚡ Native Rust</span>
+    <span>🆓 Free & MIT</span>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <h2>Everything a clipboard manager should be.</h2>
+  <p class="subtitle">And a few things no clipboard manager has ever been.</p>
+  <div class="features-grid">
+    <div class="feature-card fade-in">
+      <div class="icon">✨</div>
+      <h3>Semantic Search</h3>
+      <p>Search by meaning, not just text. A MiniLM-L6 model runs on-device to embed every clip into a 384-dimensional vector. Type a concept, get matching results.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="icon">🔌</div>
+      <h3>Zero Cloud</h3>
+      <p>Everything runs locally. The ONNX model is bundled (~22MB). No data ever leaves your machine. No account. No API key required.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="icon">🧪</div>
+      <h3>Auto-Classification</h3>
+      <p>30+ heuristic rules detect code, links, and text instantly. Optionally connect OpenRouter for LLM-powered refinement.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="icon">🖼️</div>
+      <h3>Image Support</h3>
+      <p>Copied images are stored as thumbnails in SQLite. Scroll through your visual clipboard history alongside text.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="icon">📌</div>
+      <h3>Pin & Organize</h3>
+      <p>Pin frequently-used clips so they stay at the top. Auto-classified tabs (Code / Links / Other) keep everything tidy.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="icon">🔮</div>
+      <h3>Frameless Glass UI</h3>
+      <p>Transparent, always-on-top window with a blur backdrop. Disappears when you switch focus — stays out of your way.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="icon">⌨️</div>
+      <h3>Global Shortcut</h3>
+      <p>Cmd+Shift+V summons BuffBrain from anywhere. No clicking through menus — it's always one keystroke away.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="icon">🎨</div>
+      <h3>Three Themes</h3>
+      <p>Dark, Light, or System — follow your macOS preference. Every detail is crafted for both modes.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="icon">🔐</div>
+      <h3>Secure by Default</h3>
+      <p>API keys are stored in the macOS Keychain. No config files with plaintext secrets. No telemetry. No tracking.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Semantic Search Deep Dive -->
+<section class="semantic-section" id="semantic">
+  <div class="inner">
+    <h2>The brain behind the clipboard.</h2>
+    <p class="subtitle" style="max-width:100%;">Every clip you copy is instantly embedded into a 384-dimensional vector by a quantized MiniLM-L6-v2 ONNX model — running entirely on your machine.</p>
+
+    <div class="pipeline">
+      <span class="step">📋 Clip text</span>
+      <span class="arrow">→</span>
+      <span class="step">🔤 WordPiece Tokenizer</span>
+      <span class="arrow">→</span>
+      <span class="step">🧠 MiniLM-L6 ONNX</span>
+      <span class="arrow">→</span>
+      <span class="step">📊 Mean Pooling</span>
+      <span class="arrow">→</span>
+      <span class="step">📐 L2 Normalize</span>
+      <span class="arrow">→</span>
+      <span class="step">💾 384-dim vector</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:24px;">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Model</div>
+        <div style="font-size:14px;font-weight:600;margin-top:4px;">all-MiniLM-L6-v2</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">quantized, ~22MB</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Runtime</div>
+        <div style="font-size:14px;font-weight:600;margin-top:4px;">ONNX Runtime (ort)</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">No Python, no PyTorch</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Search Method</div>
+        <div style="font-size:14px;font-weight:600;margin-top:4px;">Cosine Similarity</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Ranked by relevance</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Speed</div>
+        <div style="font-size:14px;font-weight:600;margin-top:4px;">Sub-10ms / clip</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Apple Silicon M-series</div>
+      </div>
+    </div>
+
+    <blockquote style="margin-top:32px;padding:20px 24px;background:var(--card);border:1px solid var(--border);border-radius:14px;border-left:3px solid var(--purple);color:var(--muted);font-style:italic;">
+      "Searching for <strong style="color:var(--text);">'fruit'</strong> finds clips containing 'apple', 'banana', and 'orange' — even though none of them contain the word 'fruit'. That's semantic search."
+    </blockquote>
+  </div>
+</section>
+
+<!-- Comparison -->
+<section id="compare">
+  <h2>How we stack up.</h2>
+  <p class="subtitle">No clipboard manager has on-device semantic search. BuffBrain is the first — and it's free.</p>
+  <div class="comparison-wrap">
+    <table class="comparison">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>BuffBrain</th>
+          <th>Alfred</th>
+          <th>Raycast</th>
+          <th>PastePal</th>
+          <th>CopyClip</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Semantic Search</td>
+          <td><span class="check">✅</span> On-device</td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+        </tr>
+        <tr>
+          <td>AI Classification</td>
+          <td><span class="check">✅</span> 30+ rules + optional LLM</td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+        </tr>
+        <tr>
+          <td>Local AI Only</td>
+          <td><span class="star">✦</span> Zero cloud by default</td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+        </tr>
+        <tr>
+          <td>Price</td>
+          <td><span class="check">✅</span> Free (MIT)</td>
+          <td>£49–£69</td>
+          <td>Free + $10/mo</td>
+          <td>$19.99</td>
+          <td><span class="check">✅</span> Free</td>
+        </tr>
+        <tr>
+          <td>Image Clips</td>
+          <td><span class="check">✅</span> Thumbnails</td>
+          <td><span class="x">—</span></td>
+          <td><span class="check">✅</span></td>
+          <td><span class="check">✅</span></td>
+          <td><span class="x">—</span></td>
+        </tr>
+        <tr>
+          <td>Global Shortcut</td>
+          <td><span class="check">✅</span></td>
+          <td><span class="check">✅</span></td>
+          <td><span class="check">✅</span></td>
+          <td><span class="check">✅</span></td>
+          <td><span class="check">✅</span></td>
+        </tr>
+        <tr>
+          <td>Frameless UI</td>
+          <td><span class="check">✅</span> Glass, always-on-top</td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+        </tr>
+        <tr>
+          <td>Privacy / No Telemetry</td>
+          <td><span class="star">✦</span> Zero tracking</td>
+          <td>⚠️ Some</td>
+          <td>⚠️ Some</td>
+          <td>⚠️ Unknown</td>
+          <td><span class="check">✅</span> Clean</td>
+        </tr>
+        <tr>
+          <td>Open Source</td>
+          <td><span class="check">✅</span> MIT</td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
+          <td><span class="check">✅</span></td>
+        </tr>
+        <tr>
+          <td>Native Performance</td>
+          <td><span class="check">✅</span> Rust + Tauri 2</td>
+          <td><span class="check">✅</span> Obj-C</td>
+          <td><span class="check">✅</span> Swift</td>
+          <td><span class="check">✅</span> SwiftUI</td>
+          <td><span class="check">✅</span> Obj-C</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Architecture -->
+<section id="architecture">
+  <h2>Built with modern tools.</h2>
+  <p class="subtitle">Rust backend, React frontend, Tauri 2 framework — all tied together with a tiny ONNX model that fits inside your app bundle.</p>
+  <div class="arch-grid">
+    <div class="arch-item"><div class="label">Desktop Framework</div><div class="value">Tauri 2</div></div>
+    <div class="arch-item"><div class="label">Frontend</div><div class="value">React 19 + TypeScript</div></div>
+    <div class="arch-item"><div class="label">Backend</div><div class="value">Rust (tokio + serde)</div></div>
+    <div class="arch-item"><div class="label">Storage</div><div class="value">SQLite (rusqlite)</div></div>
+    <div class="arch-item"><div class="label">AI Runtime</div><div class="value">ONNX Runtime (ort)</div></div>
+    <div class="arch-item"><div class="label">AI Model</div><div class="value">MiniLM-L6-v2 (22MB)</div></div>
+    <div class="arch-item"><div class="label">Secrets</div><div class="value">macOS Keychain</div></div>
+    <div class="arch-item"><div class="label">Clipboard</div><div class="value">Tauri Plugin v2</div></div>
+  </div>
+</section>
+
+<!-- Build CTA -->
+<section class="cta-section" id="build">
+  <h2>Try it yourself.</h2>
+  <p>Clone the repo, build from source, and have a semantic-search-powered clipboard running in minutes. No account. No API key. Just your Mac.</p>
+  <div class="cta-row">
+    <a href="https://github.com/eulogik/buffbrain" class="btn btn-primary">Clone on GitHub</a>
+    <a href="https://github.com/eulogik/buffbrain/releases" class="btn btn-outline">Download Release</a>
+  </div>
+  <div style="margin-top:32px;text-align:left;max-width:480px;margin-left:auto;margin-right:auto;position:relative;z-index:1;">
+    <pre style="background:var(--card);padding:16px 20px;border-radius:12px;border:1px solid var(--border);font-size:13px;overflow-x:auto;color:var(--muted);"><code style="font-family:'JetBrains Mono','Fira Code',monospace;">git clone https://github.com/eulogik/buffbrain.git
+cd buffbrain
+npm install
+npm run tauri dev</code></pre>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <p>
+    <a href="https://eulogik.com">Eulogik</a> &mdash; we build tools that think.
+    &nbsp;·&nbsp; MIT License &nbsp;·&nbsp;
+    <a href="https://github.com/eulogik/buffbrain">GitHub</a>
+  </p>
+  <p style="margin-top:8px;font-size:12px;">BuffBrain — the clipboard manager that actually understands what you copied.</p>
+</footer>
+
+<script>
+  // Intersection Observer for fade-in animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
