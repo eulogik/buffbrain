@@ -597,3 +597,48 @@ fn word_tokens(text: &str) -> Vec<&str> {
         .filter(|s| !s.is_empty())
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn make_embedding(mut vals: Vec<f32>) -> Vec<f32> {
+        vals.resize(384, 0.0);
+        let norm: f32 = vals.iter().map(|x| x * x).sum::<f32>().sqrt();
+        if norm > 0.0 {
+            for v in vals.iter_mut() { *v /= norm; }
+        }
+        vals
+    }
+
+    #[test]
+    fn test_semantic_search_ranks_by_similarity() {
+        let db = Database::new(PathBuf::from(":memory:"), 500).unwrap();
+
+        db.insert_clip("rust programming", ClipType::Text, None, None, Some(&make_embedding(vec![1.0, 0.0, 0.0]))).unwrap();
+        db.insert_clip("cooking recipes", ClipType::Text, None, None, Some(&make_embedding(vec![0.0, 1.0, 0.0]))).unwrap();
+        db.insert_clip("advanced rust patterns", ClipType::Code, None, None, Some(&make_embedding(vec![0.9, 0.1, 0.0]))).unwrap();
+        db.insert_clip("baking bread at home", ClipType::Text, None, None, Some(&make_embedding(vec![0.0, 0.0, 1.0]))).unwrap();
+
+        let query = make_embedding(vec![1.0, 0.0, 0.0]);
+        let results = db.semantic_search(&query, 10).unwrap();
+
+        assert_eq!(results.len(), 4, "all 4 clips returned");
+        assert!(results[0].content.contains("rust"), "top result should be most relevant to query: got '{}'", results[0].content);
+        assert!(results[0].score.unwrap() > 0.99, "exact match should score near 1.0");
+
+        // The top 2 should be rust-related
+        let top_contents: Vec<&str> = results.iter().take(2).map(|c| c.content.as_str()).collect();
+        let joined = top_contents.join(" ");
+        assert!(joined.contains("rust"), "top results should be rust-related: {:?}", top_contents);
+    }
+
+    #[test]
+    fn test_insert_without_embedding_still_works() {
+        let db = Database::new(PathBuf::from(":memory:"), 500).unwrap();
+        let clip = db.insert_clip("just text no embedding", ClipType::Text, None, None, None).unwrap();
+        assert_eq!(clip.content, "just text no embedding");
+        assert_eq!(db.count().unwrap(), 1);
+    }
+}
