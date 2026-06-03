@@ -56,12 +56,6 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev \
             patchelf libssl-dev libgtk-3-dev libayatana-appindicator3-dev
 
-      - name: Install NSIS (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          choco install nsis -y --no-progress
-
       - name: Cache cargo
         uses: actions/cache@v4
         with:
@@ -76,12 +70,20 @@ jobs:
       - name: Build frontend
         shell: bash
         run: npm run build
+
       - name: Build Tauri bundle
         shell: bash
-        run: npm run tauri build
+        run: npm run tauri build -- --bundles ${{ matrix.bundle }} --verbose 2>&1 | tee tauri_build.log
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Upload build log (Windows debug)
+        if: ${{ always() && matrix.os == 'windows-latest' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: BuffBrain-${{ matrix.target }}-build-log
+          path: tauri_build.log
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
