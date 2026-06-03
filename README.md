@@ -129,21 +129,21 @@ No cloud dependency. No API key required. No data leaves your Mac.
 
 ## ✦ vs The Competition
 
-| Feature | **BuffBrain** 🧠 | **Alfred** | **Raycast** | **Macaify** | **PastePal** | **CopyClip** |
-|---|---|---|---|---|---|---|
-| **Semantic search** | ✅ **On-device** MiniLM-L6 | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
-| **AI classification** | ✅ Heuristic 30+ rules + optional LLM | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Local AI only** | ✅ **Zero cloud** (by default) | ❌ N/A | ❌ N/A | ❌ N/A | ❌ N/A | ❌ N/A |
-| **Free & open source** | ✅ **MIT** | ❌ £49+ | ❌ Freemium | ❌ $19 | ❌ $19.99 | ✅ Free |
-| **Native performance** | ✅ Rust + Tauri 2 | ✅ Obj-C | ✅ Swift | ✅ SwiftUI | ✅ SwiftUI | ✅ Obj-C |
-| **Image clips** | ✅ Thumbnails in SQLite | ❌ Premium only | ✅ | ❌ | ✅ | ❌ |
+| Feature | **BuffBrain** 🧠 | **Alfred** | **Raycast** | **Maccy** | **Ditto** | **PastePilot** |
+|---|---|---|---|---|---|---|---|
+| **Semantic search** | ✅ **On-device** MiniLM-L6 | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **AI classification** | ✅ Heuristic 30+ rules + optional LLM | ❌ | ❌ | ❌ | ❌ | ✅ GPT-powered |
+| **Local AI only** | ✅ **Zero cloud** (by default) | ❌ | ❌ | ❌ | ❌ | ❌ Cloud-only |
+| **Free & open source** | ✅ **MIT** | ❌ £49+ | ❌ Freemium | ✅ **Free** | ✅ **Free** | ⚠️ Freemium |
+| **Cross-platform** | ⏳ Planned (Win/Linux) | ✅ Mac | ✅ Mac | ✅ Mac | ✅ **Windows** | ✅ Mac |
+| **Image clips** | ✅ Thumbnails in SQLite | ❌ Premium only | ✅ | ❌ | ✅ | ✅ |
 | **Global shortcut** | ✅ Cmd+Shift+V | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Frameless UI** | ✅ Glass, always-on-top | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Clipboard types (code/link/text)** | ✅ Auto-detected | ✅ Tags | ✅ Tags | ✅ Colors | ✅ Colors | ❌ |
+| **Clipboard types (code/link/text)** | ✅ Auto-detected | ✅ Tags | ✅ Tags | ❌ | ❌ | ❌ |
 | **Auto-start** | ✅ Configurable | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **macOS Keychain** | ✅ API keys secured | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Privacy** | ✅ **No telemetry** | ⚠️ Some | ⚠️ Some | ⚠️ Unknown | ⚠️ Unknown | ✅ Clean |
-| **Price** | **$0** | £49–£69 | Free + $10/mo | $19 one-time | $19.99 | Free |
+| **Privacy** | ✅ **No telemetry** | ⚠️ Some | ⚠️ Some | ✅ Clean | ✅ Clean | ⚠️ Some |
+| **Platform** | macOS | macOS | macOS | macOS | Windows | macOS |
 
 **Key differentiators:**
 
