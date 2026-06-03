@@ -145,6 +145,17 @@
     .feature-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
     .feature-card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
 
+    /* ─── Screenshot ─── */
+    .screenshot-row {
+      max-width: 800px; margin: 0 auto; padding: 32px 24px 48px; text-align: center;
+    }
+    .app-screenshot {
+      width: 100%; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.3); border: 1px solid var(--border);
+    }
+    .screenshot-caption {
+      font-size: 13px; color: var(--muted); margin-top: 12px; font-style: italic;
+    }
+
     /* ─── Semantic Search Deep Dive ─── */
     .semantic-section {
       background: linear-gradient(180deg, var(--bg) 0%, var(--surface) 100%);
@@ -267,6 +278,12 @@
     <span>🆓 Free & MIT</span>
   </div>
 </section>
+
+<!-- Screenshot -->
+<div class="screenshot-row">
+  <img src="screenshots/main-window.png" alt="BuffBrain screenshot showing clipboard history with semantic search" class="app-screenshot">
+  <p class="screenshot-caption">Clipboard history with on-device semantic search</p>
+</div>
 
 <!-- Features -->
 <section id="features">
@@ -395,10 +412,12 @@
           <td><span class="x">—</span></td>
           <td><span class="x">—</span></td>
           <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
         </tr>
         <tr>
           <td>AI Classification</td>
           <td><span class="check">✅</span> 30+ rules + optional LLM</td>
+          <td><span class="x">—</span></td>
           <td><span class="x">—</span></td>
           <td><span class="x">—</span></td>
           <td><span class="x">—</span></td>
@@ -411,12 +430,14 @@
           <td><span class="x">—</span></td>
           <td><span class="x">—</span></td>
           <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
         </tr>
         <tr>
           <td>Price</td>
           <td><span class="check">✅</span> Free (MIT)</td>
           <td>£49–£69</td>
           <td>Free + $10/mo</td>
+          <td><span class="check">✅</span> Free</td>
           <td><span class="check">✅</span> Free</td>
           <td><span class="check">✅</span> Free</td>
         </tr>
@@ -427,6 +448,7 @@
           <td>Mac only</td>
           <td>Mac only</td>
           <td><span class="check">✅</span> Windows</td>
+          <td>Mac only</td>
         </tr>
         <tr>
           <td>Image Clips</td>
@@ -435,9 +457,11 @@
           <td><span class="check">✅</span></td>
           <td><span class="x">—</span></td>
           <td><span class="check">✅</span></td>
+          <td><span class="check">✅</span></td>
         </tr>
         <tr>
           <td>Global Shortcut</td>
+          <td><span class="check">✅</span></td>
           <td><span class="check">✅</span></td>
           <td><span class="check">✅</span></td>
           <td><span class="check">✅</span></td>
@@ -451,12 +475,14 @@
           <td><span class="x">—</span></td>
           <td><span class="x">—</span></td>
           <td><span class="x">—</span></td>
+          <td><span class="x">—</span></td>
         </tr>
         <tr>
           <td>Privacy / No Telemetry</td>
           <td><span class="star">✦</span> Zero tracking</td>
           <td>⚠️ Some</td>
           <td>⚠️ Some</td>
+          <td><span class="check">✅</span> Clean</td>
           <td><span class="check">✅</span> Clean</td>
           <td>⚠️ Unknown</td>
         </tr>
@@ -467,6 +493,7 @@
           <td><span class="x">—</span></td>
           <td><span class="check">✅</span> GPL</td>
           <td><span class="check">✅</span> GPL</td>
+          <td><span class="x">—</span></td>
         </tr>
         <tr>
           <td>Platform</td>
@@ -475,6 +502,7 @@
           <td>macOS</td>
           <td>macOS</td>
           <td>Windows</td>
+          <td>macOS</td>
         </tr>
       </tbody>
     </table>
