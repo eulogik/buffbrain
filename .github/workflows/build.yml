@@ -58,7 +58,9 @@ jobs:
 
       - name: Install WiX (Windows)
         if: matrix.os == 'windows-latest'
-        uses: wixtoolset/actions-install@v1
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix
 
       - name: Cache cargo
         uses: actions/cache@v4
