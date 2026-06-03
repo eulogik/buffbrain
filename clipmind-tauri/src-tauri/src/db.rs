@@ -209,28 +209,319 @@ fn chrono_now() -> i64 {
 }
 
 pub fn detect_type(content: &str) -> ClipType {
-    if content.starts_with("http://") || content.starts_with("https://") || content.starts_with("www.") {
+    let trimmed = content.trim();
+    if trimmed.is_empty() {
+        return ClipType::Text;
+    }
+
+    // --- Link detection (checked first because URLs often look like code) ---
+    if is_link(trimmed) {
         return ClipType::Link;
     }
-    let code_signals = [
-        "function ", "def ", "const ", "let ", "var ", "class ", "import ", "export ",
-        "fn ", "pub fn ", "async ", "await ", "return ", "if (", "for (", "while (",
-        "{ }", "{}", "=>", "===", "!==", "==", "::", "->", "#include", "#!/",
-    ];
-    let lower = content.to_lowercase();
-    for sig in &code_signals {
-        if lower.contains(&sig.to_lowercase()) {
-            return ClipType::Code;
-        }
+
+    // --- Code detection ---
+    if is_code(trimmed) {
+        return ClipType::Code;
     }
-    if content.contains('\n') {
-        let non_empty_lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
-        if non_empty_lines.len() > 2 {
-            let indented = non_empty_lines.iter().filter(|l| l.starts_with("  ") || l.starts_with("\t")).count();
-            if indented >= 1 {
-                return ClipType::Code;
+
+    ClipType::Text
+}
+
+fn is_link(content: &str) -> bool {
+    // Standard URLs with protocol
+    if content.starts_with("http://")
+        || content.starts_with("https://")
+        || content.starts_with("www.")
+    {
+        return true;
+    }
+
+    // Email addresses
+    if let Some(at_pos) = content.find('@') {
+        if at_pos > 0 && at_pos < content.len() - 4 {
+            let local = &content[..at_pos];
+            let domain = &content[at_pos + 1..];
+            if domain.contains('.') && !local.contains(' ') && !domain.contains(' ') {
+                // Exclude common false positives like "x @ 2x"
+                if !domain.chars().any(|c| c.is_whitespace()) && domain.len() >= 3 {
+                    return true;
+                }
             }
         }
     }
-    ClipType::Text
+
+    // Absolute file paths (macOS/Unix)
+    if content.starts_with('/') || content.starts_with('~') {
+        // Must be longer than just "/" and contain path separators
+        if content.len() > 2 && content.contains('/') {
+            return true;
+        }
+    }
+
+    // IP addresses (simple pattern: x.x.x.x optionally with :port)
+    if let Some(pos) = content.find(|c: char| c == ':' || c == '/' || c == ' ' || c == '\n') {
+        let first_token = &content[..pos];
+        if is_ip_address(first_token) {
+            return true;
+        }
+    } else if is_ip_address(content) && content.len() >= 7 {
+        return true;
+    }
+
+    // Markdown-style links: [text](url)
+    if content.starts_with('[') && content.contains("](") && content.ends_with(')') {
+        return true;
+    }
+
+    // Plain domain with path (e.g., "example.com/resource")
+    if !content.contains(' ') && !content.contains('\n') {
+        let lower = content.to_lowercase();
+        if let Some(dot_pos) = lower.rfind('.') {
+            let ext = &lower[dot_pos + 1..];
+            let tlds = ["com", "org", "net", "io", "app", "dev", "ai", "edu", "gov",
+                        "me", "co", "uk", "de", "jp", "fr", "au", "ca", "us",
+                        "xyz", "info", "io", "sh", "fm", "to", "tv", "cc", "gg"];
+            if tlds.contains(&ext) {
+                // Must have something before the domain
+                let before_domain = &lower[..dot_pos];
+                if before_domain.len() >= 3 && before_domain.contains('.') {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
+
+fn is_ip_address(s: &str) -> bool {
+    let s = s.trim_end_matches(|c: char| c == ':' || c.is_digit(10));
+    let parts: Vec<&str> = s.split('.').collect();
+    if parts.len() != 4 {
+        return false;
+    }
+    parts.iter().all(|p| {
+        p.parse::<u8>().is_ok() || (p.len() == 1 && p.starts_with('0'))
+    })
+}
+
+fn is_code(content: &str) -> bool {
+    let trimmed = content.trim();
+
+    // --- Strong structural signals ---
+
+    // Matching braces with content inside is a strong code signal
+    let open_braces = trimmed.matches('{').count();
+    let close_braces = trimmed.matches('}').count();
+    if open_braces > 0 && open_braces == close_braces {
+        // Check for typical code patterns inside braces
+        if trimmed.contains(":") || trimmed.contains(";") {
+            return true;
+        }
+    }
+
+    // Semicolons at line endings (C-style languages)
+    let semicolon_lines = trimmed.lines()
+        .filter(|l| {
+            let t = l.trim();
+            !t.is_empty() && (t.ends_with(';') || t.ends_with(';'))
+        })
+        .count();
+    if semicolon_lines >= 2 {
+        return true;
+    }
+
+    // Arrow functions / lambda
+    if trimmed.contains("=>") && (trimmed.contains("=> ") || trimmed.contains("=>\n")) {
+        return true;
+    }
+
+    // --- Language-specific keyword signals ---
+    // Use word-boundary matching to avoid false positives
+    let lower = trimmed.to_lowercase();
+    let words = word_tokens(&lower);
+
+    // JavaScript/TypeScript/React
+    let js_signals = ["function ", "const ", "let ", "var ", "class ", "import ", "export ",
+                      "async ", "await ", "return ", "typeof ", "instanceof ", "new ",
+                      "this.", "null", "undefined", "true", "false",
+                      "=>", "===", "!==", "console.", "=>"];
+    for sig in &js_signals {
+        if lower.contains(sig) {
+            return true;
+        }
+    }
+
+    // Python
+    let py_signals = ["def ", "class ", "import ", "from ", "elif ", "except ",
+                      "lambda ", "yield ", "with ", "as ", "in ", "not ", "or ",
+                      "self.", "__init__", "__str__", "if __name__", "print(",
+                      "range(", "len(", "import ", "as "];
+    for sig in &py_signals {
+        if lower.contains(sig) && words.iter().any(|w| {
+            let sig_trim = sig.trim();
+                    *w == sig_trim || w.starts_with(sig_trim.trim_end_matches(|c: char| c == '(' || c == ' '))
+        }) {
+            return true;
+        }
+    }
+
+    // Rust
+    let rust_signals = ["fn ", "pub ", "impl ", "struct ", "enum ", "trait ", "use ",
+                        "mod ", "let mut ", "match ", "unsafe ", "where ",
+                        "unwrap(", "expect(", "Some(", "None(", "Ok(", "Err(",
+                        "-> ", "::", "#[", "println!"];
+    for sig in &rust_signals {
+        if lower.contains(sig) {
+            return true;
+        }
+    }
+
+    // Go
+    let go_signals = ["func ", "package ", "defer ", "go ", "chan ", "select {",
+                      "interface ", "map[", "nil", "error "];
+    for sig in &go_signals {
+        if lower.contains(sig) {
+            return true;
+        }
+    }
+
+    // SQL
+    let sql_signals = ["select ", "from ", "where ", "insert into ", "update set ",
+                       "delete from ", "create table ", "alter table ", "drop table ",
+                       "join ", "group by ", "order by ", "having ", "limit ",
+                       "inner join ", "left join ", "right join "];
+    let upper = trimmed.to_uppercase();
+    for sig in &sql_signals {
+        let upper_sig = sig.to_uppercase().trim().to_string();
+        if upper.contains(&upper_sig) {
+            return true;
+        }
+    }
+
+    // HTML/XML
+    if trimmed.starts_with('<') && trimmed.ends_with('>') && trimmed.len() > 3 {
+        return true;
+    }
+    let html_tags = ["<div", "<span", "<p>", "<a ", "<img ", "<input", "<button",
+                     "<table", "<tr>", "<td>", "<ul>", "<li>", "<html", "<body",
+                     "<head", "<style", "<script", "<?xml", "<!doctype"];
+    for tag in &html_tags {
+        if lower.contains(tag) {
+            return true;
+        }
+    }
+
+    // CSS
+    if trimmed.contains('{') && trimmed.contains('}') && trimmed.contains(':') {
+        let has_css_props = ["color:", "margin:", "padding:", "font-size:",
+                             "background:", "display:", "position:", "width:", "height:"];
+        for prop in &has_css_props {
+            if lower.contains(prop) {
+                return true;
+            }
+        }
+    }
+
+    // JSON detection (starts with { or [ and contains ":")
+    let st = trimmed.trim_start();
+    if (st.starts_with('{') || st.starts_with('['))
+        && trimmed.contains("\":\"")
+        && trimmed.ends_with(|c: char| c == '}' || c == ']')
+    {
+        return true;
+    }
+
+    // YAML/TOML (key: value pairs on multiple lines)
+    if trimmed.contains('\n') && trimmed.lines().count() >= 2 {
+        let kv_lines = trimmed.lines()
+            .filter(|l| {
+                let t = l.trim();
+                !t.is_empty() && !t.starts_with('#') && t.contains(':')
+                    && !t.contains("://")
+                    && t.len() > t.find(':').unwrap() + 1
+            })
+            .count();
+        if kv_lines as f64 / trimmed.lines().count() as f64 > 0.5 && kv_lines >= 2 {
+            return true;
+        }
+    }
+
+    // Git diffs
+    if trimmed.lines().any(|l| l.starts_with("diff --git") || l.starts_with("--- ") || l.starts_with("+++ "))
+        || (trimmed.lines().filter(|l| l.starts_with('+') || l.starts_with('-')).count() >= 3
+            && !trimmed.lines().any(|l| l.starts_with("--- ") && l.contains(':')))
+    {
+        return true;
+    }
+
+    // Error messages and stack traces
+    let error_signals = ["error:", "exception", "stack trace", "at ",
+                         "traceback", "file \"", "line ", "panic:"];
+    for sig in &error_signals {
+        if lower.contains(sig) && trimmed.lines().count() >= 2 {
+            return true;
+        }
+    }
+
+    // Shell scripts / commands
+    let shell_signals = ["#!/bin/", "#!/usr/bin/", "#!/opt/", "export ", "alias "];
+    for sig in &shell_signals {
+        if lower.starts_with(sig) {
+            return true;
+        }
+    }
+    // Shebang anywhere in first line
+    if let Some(first_line) = trimmed.lines().next() {
+        if first_line.starts_with("#!") {
+            return true;
+        }
+    }
+
+    // Makefiles and configs
+    if trimmed.starts_with(".PHONY:") || trimmed.contains(":=") {
+        if trimmed.contains('\n') && trimmed.lines().count() >= 2 {
+            return true;
+        }
+    }
+
+    // --- Multi-line indentation heuristic (improved) ---
+    if trimmed.contains('\n') {
+        let non_empty: Vec<&str> = trimmed.lines()
+            .filter(|l| !l.trim().is_empty())
+            .collect();
+        if non_empty.len() > 2 {
+            // Count indented lines
+            let indented = non_empty.iter()
+                .filter(|l| l.starts_with("  ") || l.starts_with('\t') || l.starts_with("    "))
+                .count();
+            // Stricter: require at least 40% of non-empty lines to be indented
+            if indented as f64 / non_empty.len() as f64 >= 0.4 {
+                return true;
+            }
+            // Also detect Python-style: consistent dedent patterns
+            let has_colon_line = non_empty.iter()
+                .any(|l| l.trim().ends_with(':') && !l.trim().ends_with("://"));
+            if has_colon_line && indented >= 1 {
+                return true;
+            }
+        }
+    }
+
+    // Sequential operators on a single line
+    let operators = [" && ", " || ", " + ", " - ", " * ", " / "];
+    let op_count = operators.iter()
+        .filter(|op| trimmed.contains(*op))
+        .count();
+    if op_count >= 2 {
+        return true;
+    }
+
+    false
+}
+
+fn word_tokens(text: &str) -> Vec<&str> {
+    text.split(|c: char| !c.is_alphanumeric() && c != '_')
+        .filter(|s| !s.is_empty())
+        .collect()
 }

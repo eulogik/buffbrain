@@ -1,4 +1,4 @@
-use crate::types::ClipType;
+use crate::db::detect_type;
 use anyhow::Result;
 use base64::{engine::general_purpose, Engine as _};
 use image::{imageops::FilterType, DynamicImage, GenericImageView, ImageBuffer, Rgba};
@@ -70,36 +70,6 @@ impl<R: Runtime> ClipboardWatcher<R> {
         }
         Ok(())
     }
-}
-
-fn detect_type(content: &str) -> ClipType {
-    if content.starts_with("http://") || content.starts_with("https://") || content.starts_with("www.") {
-        return ClipType::Link;
-    }
-    let code_signals = [
-        "function ", "def ", "const ", "let ", "var ", "class ", "import ", "export ",
-        "fn ", "pub fn ", "async ", "await ", "return ", "if (", "for (", "while (",
-        "===", "!==", "::", "->", "#include", "#!/",
-    ];
-    let lower = content.to_lowercase();
-    for sig in &code_signals {
-        if lower.contains(&sig.to_lowercase()) {
-            return ClipType::Code;
-        }
-    }
-    if content.contains('\n') {
-        let non_empty: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
-        if non_empty.len() > 2 {
-            let indented = non_empty
-                .iter()
-                .filter(|l| l.starts_with("  ") || l.starts_with('\t'))
-                .count();
-            if indented >= 1 {
-                return ClipType::Code;
-            }
-        }
-    }
-    ClipType::Text
 }
 
 fn make_thumbnail(rgba: &[u8], width: u32, height: u32) -> String {
