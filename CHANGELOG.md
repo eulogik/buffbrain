@@ -2,19 +2,34 @@
 
 ## 0.1.1 (2025-06-04)
 
-### 🎯 Fixed
+### 🐛 Bug Fixes
 
-- **Text classification** — Tightened heuristic rules to stop over-classifying normal text as "code":
+- **Dock icon gone** — BuffBrain now sets its activation policy to *Accessory* at runtime via `objc2`, so it never appears in the Dock on macOS. `LSUIElement` in `Info.plist` alone was being ignored in some cases.
+- **Paste focus restored** — BuffBrain captures the frontmost app when the global shortcut is triggered, and on paste explicitly activates that app before sending ⌘V, so focus returns to where you were working.
+- **Tray icon** — Regenerated `tray.png` and `tray-color.png` (22×22) from the proper `buffbrain-logo.png` (replaced placeholder).
+- **Window readability** — Background opacity bumped from 0.72 → 0.92 (dark) / 0.95 (light) so text stays legible over busy backgrounds.
+
+### 🧠 Text Classification
+
+- Tightened heuristic rules to stop over-classifying normal text as "code":
   - YAML/TOML: threshold raised from >50% to >70% kv-lines, minimum 3 lines
   - Indentation: threshold raised from ≥40% to ≥50%, minimum 4 lines; removed Python-style colon+indent heuristic (too many false positives from lists/outlines)
   - Language keywords: removed common English words (`or`, `in`, `not`, `as`, `from`, `where`, `join`, `line`) from keyword lists
   - Error signals: removed broad `"line "` pattern
+- JS signal list: removed `let `, `new `, `return `, `true`, `false`, `class `, `import `, `export ` (caused false positives on prose like "let us know", "new year", "return address"). Real JS/TS is still detected by 20+ other specific rules.
 
 ### 🖥️ Cross-Platform Builds
 
-- **Windows support** — Fixed MSVC `RuntimeLibrary` mismatch by disabling `esaxx_fast` feature on `tokenizers` crate (C++ suffix array conflicted with ONNX Runtime's `/MD` CRT)
-- **Linux support** — Removed deprecated `libappindicator3-dev` dependency
-- **CI/CD** — All 4 platform builds (macOS aarch64, macOS x86_64, Linux .deb, Windows .msi→.nsis) now pass consistently
+- **Windows support** — Fixed MSVC `RuntimeLibrary` mismatch by disabling `esaxx_fast` feature on `tokenizers` crate (C++ suffix array conflicted with ONNX Runtime's `/MD` CRT).
+- **Linux support** — Removed deprecated `libappindicator3-dev` dependency.
+- **CI/CD** — All 4 platform builds (macOS aarch64, macOS x86_64, Linux .deb, Windows NSIS .exe) now pass consistently in GitHub Actions.
+
+### 📦 Downloads
+
+- **macOS** (Apple Silicon) — `.dmg`
+- **macOS** (Intel) — `.dmg`
+- **Linux** — `.deb`
+- **Windows** — `.exe` (NSIS installer)
 
 ## 0.1.0 (2025-06-03)
 
