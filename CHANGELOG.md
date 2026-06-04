@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.1 (2025-06-04)
+
+### 🎯 Fixed
+
+- **Text classification** — Tightened heuristic rules to stop over-classifying normal text as "code":
+  - YAML/TOML: threshold raised from >50% to >70% kv-lines, minimum 3 lines
+  - Indentation: threshold raised from ≥40% to ≥50%, minimum 4 lines; removed Python-style colon+indent heuristic (too many false positives from lists/outlines)
+  - Language keywords: removed common English words (`or`, `in`, `not`, `as`, `from`, `where`, `join`, `line`) from keyword lists
+  - Error signals: removed broad `"line "` pattern
+
+### 🖥️ Cross-Platform Builds
+
+- **Windows support** — Fixed MSVC `RuntimeLibrary` mismatch by disabling `esaxx_fast` feature on `tokenizers` crate (C++ suffix array conflicted with ONNX Runtime's `/MD` CRT)
+- **Linux support** — Removed deprecated `libappindicator3-dev` dependency
+- **CI/CD** — All 4 platform builds (macOS aarch64, macOS x86_64, Linux .deb, Windows .msi→.nsis) now pass consistently
+
 ## 0.1.0 (2025-06-03)
 
 ### 🚀 Initial Release

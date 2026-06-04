@@ -1,6 +1,6 @@
 [package]
 name = "buffbrain"
-version = "0.1.0"
+version = "0.1.1"
 description = "BuffBrain - AI Clipboard Manager (Tauri)"
 authors = ["BuffBrain"]
 edition = "2021"

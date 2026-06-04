@@ -426,9 +426,8 @@ fn is_code(content: &str) -> bool {
 
     // Python
     let py_signals = ["def ", "class ", "import ", "from ", "elif ", "except ",
-                      "lambda ", "yield ", "with ", "as ", "in ", "not ", "or ",
-                      "self.", "__init__", "__str__", "if __name__", "print(",
-                      "range(", "len(", "import ", "as "];
+                      "lambda ", "yield ", "self.", "__init__", "__str__",
+                      "if __name__", "print(", "range(", "len("];
     for sig in &py_signals {
         if lower.contains(sig) && words.iter().any(|w| {
             let sig_trim = sig.trim();
@@ -458,11 +457,11 @@ fn is_code(content: &str) -> bool {
         }
     }
 
-    // SQL
-    let sql_signals = ["select ", "from ", "where ", "insert into ", "update set ",
+    // SQL (keep only multi-word or very specific signals to avoid English-word false positives)
+    let sql_signals = ["insert into ", "update set ",
                        "delete from ", "create table ", "alter table ", "drop table ",
-                       "join ", "group by ", "order by ", "having ", "limit ",
-                       "inner join ", "left join ", "right join "];
+                       "inner join ", "left join ", "right join ", "select count(",
+                       "select distinct ", "select * from ", "select top "];
     let upper = trimmed.to_uppercase();
     for sig in &sql_signals {
         let upper_sig = sig.to_uppercase().trim().to_string();
@@ -505,7 +504,8 @@ fn is_code(content: &str) -> bool {
     }
 
     // YAML/TOML (key: value pairs on multiple lines)
-    if trimmed.contains('\n') && trimmed.lines().count() >= 2 {
+    if trimmed.contains('\n') && trimmed.lines().count() >= 3 {
+        let total_lines = trimmed.lines().count();
         let kv_lines = trimmed.lines()
             .filter(|l| {
                 let t = l.trim();
@@ -514,7 +514,8 @@ fn is_code(content: &str) -> bool {
                     && t.len() > t.find(':').unwrap() + 1
             })
             .count();
-        if kv_lines as f64 / trimmed.lines().count() as f64 > 0.5 && kv_lines >= 2 {
+        // Must be >70% kv lines and at least 3 kv pairs to reduce false positives from notes
+        if kv_lines as f64 / total_lines as f64 > 0.7 && kv_lines >= 3 {
             return true;
         }
     }
@@ -529,7 +530,7 @@ fn is_code(content: &str) -> bool {
 
     // Error messages and stack traces
     let error_signals = ["error:", "exception", "stack trace", "at ",
-                         "traceback", "file \"", "line ", "panic:"];
+                         "traceback", "file \"", "panic:"];
     for sig in &error_signals {
         if lower.contains(sig) && trimmed.lines().count() >= 2 {
             return true;
@@ -557,24 +558,18 @@ fn is_code(content: &str) -> bool {
         }
     }
 
-    // --- Multi-line indentation heuristic (improved) ---
+    // --- Multi-line indentation heuristic ---
     if trimmed.contains('\n') {
         let non_empty: Vec<&str> = trimmed.lines()
             .filter(|l| !l.trim().is_empty())
             .collect();
-        if non_empty.len() > 2 {
-            // Count indented lines
+        if non_empty.len() >= 4 {
+            // Count indented lines (2+ spaces or tab)
             let indented = non_empty.iter()
                 .filter(|l| l.starts_with("  ") || l.starts_with('\t') || l.starts_with("    "))
                 .count();
-            // Stricter: require at least 40% of non-empty lines to be indented
-            if indented as f64 / non_empty.len() as f64 >= 0.4 {
-                return true;
-            }
-            // Also detect Python-style: consistent dedent patterns
-            let has_colon_line = non_empty.iter()
-                .any(|l| l.trim().ends_with(':') && !l.trim().ends_with("://"));
-            if has_colon_line && indented >= 1 {
+            // Require at least 50% of non-empty lines to be indented
+            if indented as f64 / non_empty.len() as f64 >= 0.5 {
                 return true;
             }
         }
