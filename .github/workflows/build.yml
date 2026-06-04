@@ -78,7 +78,14 @@ jobs:
 
       - name: Cargo build (release)
         shell: bash
-        run: cargo build --release --manifest-path src-tauri/Cargo.toml
+        run: cargo build --release --manifest-path src-tauri/Cargo.toml 2>&1 | tee cargo_build.log; exit ${PIPESTATUS[0]}
+
+      - name: Upload cargo build log (Windows)
+        if: ${{ failure() && matrix.os == 'windows-latest' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: BuffBrain-${{ matrix.target }}-cargo-log
+          path: cargo_build.log
 
       - name: Tauri bundle
         shell: bash
