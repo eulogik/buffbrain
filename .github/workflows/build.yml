@@ -71,19 +71,13 @@ jobs:
         shell: bash
         run: npm run build
 
-      - name: Build Tauri bundle
-        shell: bash
-        run: npm run tauri build -- --bundles ${{ matrix.bundle }} --verbose 2>&1 | tee tauri_build.log
+      - uses: tauri-apps/tauri-action@v2
+        id: tauri_build
+        with:
+          args: --bundles ${{ matrix.bundle }}
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-
-      - name: Upload build log (Windows debug)
-        if: ${{ always() && matrix.os == 'windows-latest' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: BuffBrain-${{ matrix.target }}-build-log
-          path: tauri_build.log
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
