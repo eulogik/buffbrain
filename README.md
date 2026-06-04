@@ -24,8 +24,16 @@ On-device semantic search. AI-powered classification. Blazingly fast native perf
     <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square">
   </picture>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/macOS-10.15+-brightgreen?style=flat-square&labelColor=1a1a1a">
-    <img alt="macOS 10.15+" src="https://img.shields.io/badge/macOS-10.15+-brightgreen?style=flat-square">
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/macOS-10.15+-brightgreen?style=flat-square&labelColor=1a1a1a&logo=apple">
+    <img alt="macOS 10.15+" src="https://img.shields.io/badge/macOS-10.15+-brightgreen?style=flat-square&logo=apple">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Linux-.deb-important?style=flat-square&labelColor=1a1a1a&logo=linux">
+    <img alt="Linux .deb" src="https://img.shields.io/badge/Linux-.deb-important?style=flat-square&logo=linux">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Windows-.exe+nsis-blue?style=flat-square&labelColor=1a1a1a&logo=windows">
+    <img alt="Windows .exe + NSIS" src="https://img.shields.io/badge/Windows-.exe+nsis-blue?style=flat-square&logo=windows">
   </picture>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Rust-1.85+-orange?style=flat-square&logo=rust&labelColor=1a1a1a">
@@ -137,7 +145,7 @@ No cloud dependency. No API key required. No data leaves your Mac.
 | **AI classification** | ✅ Heuristic 30+ rules + optional LLM | ❌ | ❌ | ❌ | ❌ | ✅ GPT-powered |
 | **Local AI only** | ✅ **Zero cloud** (by default) | ❌ | ❌ | ❌ | ❌ | ❌ Cloud-only |
 | **Free & open source** | ✅ **MIT** | ❌ £49+ | ❌ Freemium | ✅ **Free** | ✅ **Free** | ⚠️ Freemium |
-| **Cross-platform** | ⏳ Planned (Win/Linux) | ✅ Mac | ✅ Mac | ✅ Mac | ✅ **Windows** | ✅ Mac |
+| **Cross-platform** | ✅ macOS, Linux, Windows | ✅ Mac | ✅ Mac | ✅ Mac | ✅ **Windows** | ✅ Mac |
 | **Image clips** | ✅ Thumbnails in SQLite | ❌ Premium only | ✅ | ❌ | ✅ | ✅ |
 | **Global shortcut** | ✅ Cmd+Shift+V | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Frameless UI** | ✅ Glass, always-on-top | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -145,7 +153,7 @@ No cloud dependency. No API key required. No data leaves your Mac.
 | **Auto-start** | ✅ Configurable | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **macOS Keychain** | ✅ API keys secured | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Privacy** | ✅ **No telemetry** | ⚠️ Some | ⚠️ Some | ✅ Clean | ✅ Clean | ⚠️ Some |
-| **Platform** | macOS | macOS | macOS | macOS | Windows | macOS |
+| **Platform** | macOS, Linux, Windows | macOS | macOS | macOS | Windows | macOS |
 
 **Key differentiators:**
 
@@ -230,7 +238,12 @@ No cloud dependency. No API key required. No data leaves your Mac.
 
 - [Rust](https://rustup.rs) (latest stable)
 - [Node.js](https://nodejs.org) 18+
-- macOS 10.15+ (for now)
+
+**Platform-specific:**
+
+- **macOS:** Xcode Command Line Tools (`xcode-select --install`)
+- **Linux:** `sudo apt install libwebkit2gtk-4.1-dev librsvg2-dev patchelf libssl-dev libgtk-3-dev`
+- **Windows:** [NSIS](https://nsis.sourceforge.io/Download) (for `.exe` installer)
 
 ### Quick Start
 
@@ -254,9 +267,14 @@ npm run tauri dev
 npm run tauri build
 ```
 
-Output:
-- **`.app` bundle:** `src-tauri/target/release/bundle/macos/BuffBrain.app`
-- **`.dmg` installer:** `src-tauri/target/release/bundle/dmg/BuffBrain_0.1.0_aarch64.dmg`
+Output by platform:
+
+| Platform | Bundle |
+|---|---|
+| macOS (Apple Silicon) | `bundle/dmg/BuffBrain_0.1.1_aarch64.dmg` |
+| macOS (Intel) | `bundle/dmg/BuffBrain_0.1.1_x86_64.dmg` |
+| Linux (x86_64) | `bundle/deb/buffbrain_0.1.1_amd64.deb` |
+| Windows (x86_64) | `bundle/nsis/BuffBrain_0.1.1_x64-setup.exe` + `BuffBrain_0.1.1_x64-setup.nsis` |
 
 ### Regenerate Icons
 
@@ -274,8 +292,8 @@ The source logo (`src-tauri/icons/buffbrain-logo.png`) is the single source of t
 - [x] Heuristic + optional LLM classification
 - [x] Tray icon + auto-start
 - [x] Settings UI (theme, AI, tray, autostart)
-- [ ] Linux support
-- [ ] Windows support
+- [x] Linux support (.deb)
+- [x] Windows support (.exe + NSIS installer)
 - [ ] Clipboard history sync (iCloud)
 - [ ] Multi-device or local network sync
 - [ ] Custom embedding models (bring your own ONNX)
