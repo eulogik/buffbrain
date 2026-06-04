@@ -88,20 +88,39 @@ jobs:
             src-tauri/target/release/buffbrain${{ matrix.suffix }}
 
   release:
+    permissions:
+      contents: write
     if: github.event_name == 'release'
     needs: [build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: BuffBrain-*
-          merge-multiple: true
+          path: artifacts
+      - name: Extract installers from artifact zips
+        run: |
+          set -e
+          cd artifacts
+          for archive in *.zip; do
+            [ -f "$archive" ] || continue
+            echo "::group::Extracting $archive"
+            unzip -o -q "$archive"
+            echo "::endgroup::"
+          done
+          echo "::group::Files ready to upload"
+          ls -la
+          echo "::endgroup::"
       - name: Upload release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
+          cd artifacts
           for file in *; do
-            if [ -f "$file" ]; then
-              gh release upload ${{ github.event.release.tag_name }} "$file"
-            fi
+            case "$file" in
+              *.zip|*.txt) continue ;;
+            esac
+            [ -f "$file" ] || continue
+            echo "Uploading $file"
+            gh release upload "${{ github.event.release.tag_name }}" "$file" --clobber
           done
