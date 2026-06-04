@@ -60,8 +60,10 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: bash
         run: |
-          choco install nsis -y --no-progress
+          choco install nsis -y --no-progress 2>&1
           echo "C:/Program Files (x86)/NSIS" >> $GITHUB_PATH
+          which makensis || echo "makensis NOT FOUND"
+          ls -la "/c/Program Files (x86)/NSIS/" 2>&1 || echo "NSIS dir not found"
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -74,9 +76,23 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
 
-      - name: Build
+      - name: Cargo build (release)
+        shell: bash
+        run: cargo build --release --manifest-path src-tauri/Cargo.toml
+
+      - name: Tauri bundle
         shell: bash
         run: npm run tauri build -- --bundles ${{ matrix.bundle }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Upload artifacts (fallback - binary only)
+        if: ${{ failure() && matrix.os == 'windows-latest' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: BuffBrain-${{ matrix.target }}-bin
+          path: src-tauri/target/release/buffbrain.exe
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
