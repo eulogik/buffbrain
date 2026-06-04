@@ -76,36 +76,13 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
 
-      - name: Cargo build (release)
-        shell: bash
-        run: |
-          set +e
-          cargo build --release --manifest-path src-tauri/Cargo.toml > cargo_build.log 2>&1
-          EXIT_CODE=$?
-          cat cargo_build.log
-          exit $EXIT_CODE
-
-      - name: Upload cargo build log
-        if: ${{ always() && matrix.os == 'windows-latest' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: BuffBrain-${{ matrix.target }}-cargo-log
-          path: cargo_build.log
-          if-no-files-found: warn
-
       - name: Tauri bundle
         shell: bash
-        run: npm run tauri build -- --bundles ${{ matrix.bundle }}
+        run: |
+          CRT_STATIC=false npm run tauri build -- --bundles ${{ matrix.bundle }}
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-
-      - name: Upload artifacts (fallback - binary only)
-        if: ${{ failure() && matrix.os == 'windows-latest' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: BuffBrain-${{ matrix.target }}-bin
-          path: src-tauri/target/release/buffbrain.exe
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
