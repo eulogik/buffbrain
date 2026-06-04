@@ -1,23 +1,40 @@
 # Changelog
 
-## 0.1.2 (2025-06-04)
+## 0.1.3 (2025-06-04)
 
 ### 🐛 Bug Fixes
 
-- **macOS Gatekeeper "damaged file" error** — v0.1.1 DMGs were unsigned and refused to install on Apple Silicon Macs. The macOS build step in CI now applies an **ad-hoc signature** (`codesign --force --deep --sign -`) to the bundled `.app` before DMG packaging. This satisfies macOS's minimum signature requirement and lets the DMG install normally.
-- Users on v0.1.1 who hit the "damaged file" error can either upgrade to v0.1.2, or apply one of the workarounds documented in the README (right-click → Open, `xattr -d com.apple.quarantine`, or `codesign --force --deep --sign -`).
+- **v0.1.2 DMG signing was ineffective** — the v0.1.2 CI step that ran `codesign --force --deep --sign -` ran *after* `tauri build`, but `tauri build` had already packaged the unsigned `.app` into the DMG. The DMG still contained the original (linker-signed only) `.app`, so users still saw Gatekeeper complaints. **This release** sets `bundle.macOS.signingIdentity: "-"` in `tauri.conf.json`, so Tauri signs the `.app` *during* the build, *before* the DMG is created. The DMG now actually contains a properly ad-hoc-signed `.app`.
+
+### What changed
+
+- `src-tauri/tauri.conf.json`: `bundle.macOS.signingIdentity: "-"` (Tauri does the ad-hoc sign during `tauri build`)
+- `.github/workflows/build.yml`: removed the redundant post-build `codesign` step (no longer needed — Tauri handles it)
+- Versions bumped to 0.1.3
+
+### If you have v0.1.2 installed and it works
+No action needed. v0.1.3 is a packaging fix; the `.app` binary is identical to v0.1.2.
+
+### If v0.1.2 still showed "damaged file"
+Upgrade to v0.1.3 — the DMG now contains a properly signed `.app`.
 
 ### ⚠️ Known limitations (v0.1.x)
 
-- Ad-hoc signing clears the "damaged file" error but **does not** establish a trusted Developer ID. First launch still requires right-click → Open (or one of the other workarounds).
+- Ad-hoc signing clears the "damaged file" error but **does not** establish a trusted Developer ID. First launch still requires right-click → Open (or one of the workarounds in the README).
 - Proper Developer ID signing + Apple notarization is planned for a later release and will allow silent installation.
 
 ### 📦 Downloads
 
-- **macOS** (Apple Silicon) — `.dmg` (now ad-hoc signed)
-- **macOS** (Intel) — `.dmg` (now ad-hoc signed)
-- **Linux** — `.deb`
-- **Windows** — `.exe` (NSIS installer)
+- **macOS** (Apple Silicon) — `BuffBrain_0.1.3_aarch64.dmg`
+- **macOS** (Intel) — `BuffBrain_0.1.3_x64.dmg`
+- **Linux** — `BuffBrain_0.1.3_amd64.deb`
+- **Windows** — `BuffBrain_0.1.3_x64-setup.exe`
+
+## 0.1.2 (2025-06-04)
+
+### 🐛 Bug Fixes
+
+- **macOS Gatekeeper "damaged file" error** — v0.1.1 DMGs were unsigned and refused to install on Apple Silicon Macs. The macOS build step in CI now applies an **ad-hoc signature** (`codesign --force --deep --sign -`) to the bundled `.app` before DMG packaging. *(Note: v0.1.2's CI step ran after the DMG was already created, so the fix was ineffective on the shipped DMG. See v0.1.3 for the real fix.)*
 
 ## 0.1.1 (2025-06-04)
 
