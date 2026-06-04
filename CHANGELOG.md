@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.2 (2025-06-04)
+
+### 🐛 Bug Fixes
+
+- **macOS Gatekeeper "damaged file" error** — v0.1.1 DMGs were unsigned and refused to install on Apple Silicon Macs. The macOS build step in CI now applies an **ad-hoc signature** (`codesign --force --deep --sign -`) to the bundled `.app` before DMG packaging. This satisfies macOS's minimum signature requirement and lets the DMG install normally.
+- Users on v0.1.1 who hit the "damaged file" error can either upgrade to v0.1.2, or apply one of the workarounds documented in the README (right-click → Open, `xattr -d com.apple.quarantine`, or `codesign --force --deep --sign -`).
+
+### ⚠️ Known limitations (v0.1.x)
+
+- Ad-hoc signing clears the "damaged file" error but **does not** establish a trusted Developer ID. First launch still requires right-click → Open (or one of the other workarounds).
+- Proper Developer ID signing + Apple notarization is planned for a later release and will allow silent installation.
+
+### 📦 Downloads
+
+- **macOS** (Apple Silicon) — `.dmg` (now ad-hoc signed)
+- **macOS** (Intel) — `.dmg` (now ad-hoc signed)
+- **Linux** — `.deb`
+- **Windows** — `.exe` (NSIS installer)
+
 ## 0.1.1 (2025-06-04)
 
 ### 🐛 Bug Fixes

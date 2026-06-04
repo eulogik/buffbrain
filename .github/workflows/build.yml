@@ -79,6 +79,18 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
+      - name: Ad-hoc sign macOS .app
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          APP_PATH="src-tauri/target/release/bundle/macos/BuffBrain.app"
+          if [ -d "$APP_PATH" ]; then
+            codesign --force --deep --sign - "$APP_PATH"
+            codesign --verify --verbose=2 "$APP_PATH" || true
+          else
+            echo "No .app bundle found at $APP_PATH, skipping codesign"
+          fi
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

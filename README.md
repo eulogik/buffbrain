@@ -232,6 +232,51 @@ No cloud dependency. No API key required. No data leaves your Mac.
 
 ---
 
+## ✦ Install
+
+Download the latest release for your platform from the [Releases page](https://github.com/eulogik/buffbrain/releases).
+
+### macOS — Gatekeeper workaround
+
+v0.1.x builds are **ad-hoc signed** (no Apple Developer ID), so macOS will block the first launch with one of:
+
+- *"BuffBrain.app is damaged and can't be opened"*
+- *"BuffBrain.app cannot be opened because the developer cannot be verified"*
+
+Pick one of these to bypass:
+
+**Option A — GUI (one-time):**
+1. Open the `.dmg` and drag `BuffBrain` to `/Applications`
+2. In `/Applications`, **right-click** `BuffBrain.app` → **Open** (not double-click)
+3. Click **Open** in the warning dialog
+4. After that, double-click works normally
+
+**Option B — Terminal (works on Apple Silicon too):**
+```bash
+xattr -d com.apple.quarantine "/Applications/BuffBrain.app"
+```
+
+**Option C — ad-hoc sign manually (if the above still fails):**
+```bash
+codesign --force --deep --sign - "/Applications/BuffBrain.app"
+```
+
+> Proper Developer ID signing + notarization is on the roadmap — until then, please use one of the workarounds above. See [issue tracker](https://github.com/eulogik/buffbrain/issues) for status.
+
+### Linux
+
+```bash
+sudo dpkg -i BuffBrain_*.deb
+sudo apt-get install -f   # resolve any missing deps
+buffbrain
+```
+
+### Windows
+
+Run the NSIS installer `.exe`. SmartScreen may show a warning for unsigned binaries — click **More info** → **Run anyway**.
+
+---
+
 ## ✦ Build from Source
 
 ### Prerequisites
