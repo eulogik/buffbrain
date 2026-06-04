@@ -414,10 +414,12 @@ fn is_code(content: &str) -> bool {
     let words = word_tokens(&lower);
 
     // JavaScript/TypeScript/React
-    let js_signals = ["function ", "const ", "let ", "var ", "class ", "import ", "export ",
-                      "async ", "await ", "return ", "typeof ", "instanceof ", "new ",
-                      "this.", "null", "undefined", "true", "false",
-                      "=>", "===", "!==", "console.", "=>"];
+    // Single English words ("let", "new", "return", "true", "false", "class", "import")
+    // are excluded to avoid false positives — real JS code typically has multiple signals
+    // (semicolons, =>, braces, function, const, etc.) that will still be caught.
+    let js_signals = ["function ", "const ", "var ", "async ", "await ",
+                      "typeof ", "instanceof ", "this.", "null", "undefined",
+                      "=>", "===", "!==", "console."];
     for sig in &js_signals {
         if lower.contains(sig) {
             return true;
@@ -528,8 +530,8 @@ fn is_code(content: &str) -> bool {
         return true;
     }
 
-    // Error messages and stack traces
-    let error_signals = ["error:", "exception", "stack trace", "at ",
+    // Error messages and stack traces (avoid broad English words like bare "at")
+    let error_signals = ["error:", "exception", "stack trace",
                          "traceback", "file \"", "panic:"];
     for sig in &error_signals {
         if lower.contains(sig) && trimmed.lines().count() >= 2 {
@@ -558,22 +560,10 @@ fn is_code(content: &str) -> bool {
         }
     }
 
-    // --- Multi-line indentation heuristic ---
-    if trimmed.contains('\n') {
-        let non_empty: Vec<&str> = trimmed.lines()
-            .filter(|l| !l.trim().is_empty())
-            .collect();
-        if non_empty.len() >= 4 {
-            // Count indented lines (2+ spaces or tab)
-            let indented = non_empty.iter()
-                .filter(|l| l.starts_with("  ") || l.starts_with('\t') || l.starts_with("    "))
-                .count();
-            // Require at least 50% of non-empty lines to be indented
-            if indented as f64 / non_empty.len() as f64 >= 0.5 {
-                return true;
-            }
-        }
-    }
+    // --- Multi-line indentation heuristic REMOVED ---
+    // Caused too many false positives (lists, outlines, formatted text).
+    // Code is reliably detected by the 20+ other rules above.
+    //
 
     // Sequential operators on a single line
     let operators = [" && ", " || ", " + ", " - ", " * ", " / "];
@@ -597,6 +587,128 @@ fn word_tokens(text: &str) -> Vec<&str> {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+
+    fn check_rules(content: &str) -> Vec<String> {
+        let trimmed = content.trim();
+        let lower = trimmed.to_lowercase();
+        let mut hits = Vec::new();
+
+        // Braces
+        let ob = trimmed.matches('{').count();
+        let cb = trimmed.matches('}').count();
+        if ob > 0 && ob == cb && (trimmed.contains(":") || trimmed.contains(";")) {
+            hits.push("braces".into());
+        }
+
+        // Semicolons
+        let sc = trimmed.lines().filter(|l| { let t=l.trim(); !t.is_empty() && t.ends_with(';') }).count();
+        if sc >= 2 { hits.push("semicolons".into()); }
+
+        // Arrow
+        if trimmed.contains("=>") && (trimmed.contains("=> ") || trimmed.contains("=>\n")) {
+            hits.push("arrow".into());
+        }
+
+        // JS keywords
+        let js = ["function ", "const ", "var ", "async ", "await ",
+                  "typeof ", "instanceof ", "this.", "null", "undefined",
+                  "===", "!==", "console."];
+        for sig in &js { if lower.contains(sig) { hits.push(format!("js:{}", sig.trim())); } }
+
+        // Python
+        let py = ["def ", "class ", "import ", "from ", "elif ", "except ", "lambda ",
+                  "yield ", "self.", "__init__", "__str__", "if __name__", "print(", "range(", "len("];
+        for sig in &py {
+            if lower.contains(sig) {
+                let words = word_tokens(&lower);
+                if words.iter().any(|w| {
+                    let st = sig.trim();
+                    *w == st || w.starts_with(st.trim_end_matches(|c: char| c == '(' || c == ' '))
+                }) { hits.push(format!("py:{}", sig.trim().trim_end_matches('('))); }
+            }
+        }
+
+        // Rust
+        let rs = ["fn ", "pub ", "impl ", "struct ", "enum ", "trait ", "use ",
+                  "mod ", "let mut ", "match ", "unsafe ", "where ",
+                  "unwrap(", "expect(", "Some(", "None(", "Ok(", "Err(",
+                  "-> ", "::", "#[", "println!"];
+        for sig in &rs { if lower.contains(sig) { hits.push(format!("rust:{}", sig.trim())); } }
+
+        // Go
+        let go = ["func ", "package ", "defer ", "go ", "chan ", "select {",
+                  "interface ", "map[", "nil", "error "];
+        for sig in &go { if lower.contains(sig) { hits.push(format!("go:{}", sig.trim())); } }
+
+        // SQL
+        let sql = ["insert into ", "update set ", "delete from ", "create table ",
+                   "alter table ", "drop table ", "inner join", "left join", "right join",
+                   "select count(", "select distinct ", "select * from ", "select top "];
+        let upper = trimmed.to_uppercase();
+        for sig in &sql {
+            let us = sig.to_uppercase().trim().to_string();
+            if upper.contains(&us) { hits.push(format!("sql:{}", sig.trim())); }
+        }
+
+        // HTML
+        let html = ["<div", "<span", "<p>", "<a ", "<img ", "<input", "<button",
+                    "<table", "<tr>", "<td>", "<ul>", "<li>", "<html", "<body",
+                    "<head", "<style", "<script", "<?xml", "<!doctype"];
+        for tag in &html { if lower.contains(tag) { hits.push(format!("html:{}", tag)); } }
+
+        // CSS
+        if trimmed.contains('{') && trimmed.contains('}') && trimmed.contains(':') {
+            let css = ["color:", "margin:", "padding:", "font-size:",
+                       "background:", "display:", "position:", "width:", "height:"];
+            for prop in &css { if lower.contains(prop) { hits.push(format!("css:{}", prop)); } }
+        }
+
+        // JSON
+        let st = trimmed.trim_start();
+        if (st.starts_with('{') || st.starts_with('[')) && trimmed.contains("\":\"") && trimmed.ends_with(|c: char| c == '}' || c == ']') {
+            hits.push("json".into());
+        }
+
+        // YAML
+        if trimmed.contains('\n') && trimmed.lines().count() >= 3 {
+            let total = trimmed.lines().count();
+            let kv = trimmed.lines().filter(|l| {
+                let t = l.trim();
+                !t.is_empty() && !t.starts_with('#') && t.contains(':') && !t.contains("://") && t.len() > t.find(':').unwrap() + 1
+            }).count();
+            if kv as f64 / total as f64 > 0.7 && kv >= 3 { hits.push("yaml".into()); }
+        }
+
+        // Git diffs
+        if trimmed.lines().any(|l| l.starts_with("diff --git") || l.starts_with("--- ") || l.starts_with("+++ "))
+            || (trimmed.lines().filter(|l| l.starts_with('+') || l.starts_with('-')).count() >= 3
+                && !trimmed.lines().any(|l| l.starts_with("--- ") && l.contains(':'))) {
+            hits.push("git".into());
+        }
+
+        // Stack traces
+        let err = ["error:", "exception", "stack trace", "traceback", "file \"", "panic:"];
+        for sig in &err { if lower.contains(sig) && trimmed.lines().count() >= 2 { hits.push(format!("err:{}", sig.trim())); } }
+
+        // Shell
+        let sh = ["#!/bin/", "#!/usr/bin/", "#!/opt/", "export ", "alias "];
+        for sig in &sh { if lower.starts_with(sig) { hits.push(format!("shell:{}", sig.trim())); } }
+        if let Some(first) = trimmed.lines().next() { if first.starts_with("#!") { hits.push("shebang".into()); } }
+
+        // Makefile
+        if trimmed.starts_with(".PHONY:") || trimmed.contains(":=") {
+            if trimmed.contains('\n') && trimmed.lines().count() >= 2 { hits.push("makefile".into()); }
+        }
+
+        // Indentation (removed — too many false positives)
+
+        // Sequential operators
+        let ops = [" && ", " || ", " + ", " - ", " * ", " / "];
+        let oc = ops.iter().filter(|op| trimmed.contains(*op)).count();
+        if oc >= 2 { hits.push("operators".into()); }
+
+        hits
+    }
 
     fn make_embedding(mut vals: Vec<f32>) -> Vec<f32> {
         vals.resize(384, 0.0);
@@ -627,6 +739,49 @@ mod tests {
         let top_contents: Vec<&str> = results.iter().take(2).map(|c| c.content.as_str()).collect();
         let joined = top_contents.join(" ");
         assert!(joined.contains("rust"), "top results should be rust-related: {:?}", top_contents);
+    }
+
+    #[test]
+    fn debug_email_triggers() {
+        let email = "Dear Candidate,
+
+You are invited for an interview at Eulogik. Please report at the given address on the scheduled date and time mentioned in this invitation.
+
+Kindly bring:
+
+* One hard copy of your updated CV/Resume
+* One recent passport-size photograph
+
+Please ensure you arrive on time. Kindly do not expect navigation assistance over phone calls. However, if absolutely required, you may contact our base office during working hours at:
++91-755-4078091
+
+Please note:
+
+* This interview process is strictly in-office at Bhopal. No remote/online interviews will be conducted.
+* If you are unable to attend the interview in Bhopal, you may simply ignore this message.
+* If you need a different schedule, you may request it once through the reschedule request feature on Indeed.
+* Candidates shortlisted after the first (technical) round will be contacted further for the HR round.
+* If you have already appeared for an interview with Eulogik during the last 30 days, please ignore this message.
+
+Regards,
+Team Eulogik";
+        let hits = check_rules(email);
+        println!("Email triggers: {:?}", hits);
+        for hit in &hits {
+            println!("  => {}", hit);
+        }
+        assert!(hits.is_empty(), "Email should trigger NO code rules, got: {:?}", hits);
+    }
+
+    #[test]
+    fn debug_list_triggers() {
+        let list = "Items needed:\n  Milk\n  Bread\n  Eggs\n  Butter\n  Cheese";
+        let hits = check_rules(list);
+        println!("List triggers: {:?}", hits);
+        for hit in &hits {
+            println!("  => {}", hit);
+        }
+        assert!(hits.is_empty(), "List should trigger NO code rules, got: {:?}", hits);
     }
 
     #[test]

@@ -5,9 +5,9 @@
 }
 
 :root {
-  --bg-glass: rgba(22, 22, 24, 0.72);
-  --bg-glass-2: rgba(36, 36, 38, 0.76);
-  --bg-glass-3: rgba(50, 50, 54, 0.80);
+  --bg-glass: rgba(22, 22, 24, 0.92);
+  --bg-glass-2: rgba(36, 36, 38, 0.94);
+  --bg-glass-3: rgba(50, 50, 54, 0.95);
   --bg-card: rgba(255, 255, 255, 0.06);
   --bg-card-hover: rgba(255, 255, 255, 0.10);
   --bg-card-selected: rgba(10, 132, 255, 0.18);
@@ -36,9 +36,9 @@
 }
 
 [data-theme="light"] {
-  --bg-glass: rgba(240, 240, 244, 0.76);
-  --bg-glass-2: rgba(225, 225, 230, 0.80);
-  --bg-glass-3: rgba(210, 210, 216, 0.84);
+  --bg-glass: rgba(240, 240, 244, 0.95);
+  --bg-glass-2: rgba(225, 225, 230, 0.96);
+  --bg-glass-3: rgba(210, 210, 216, 0.97);
   --bg-card: rgba(0, 0, 0, 0.03);
   --bg-card-hover: rgba(0, 0, 0, 0.06);
   --bg-card-selected: rgba(10, 132, 255, 0.10);

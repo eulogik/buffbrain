@@ -19,6 +19,8 @@ pub struct AppState {
     pub embedder: Option<Arc<Embedder>>,
     pub data_dir: PathBuf,
     pub tray: Mutex<Option<TrayIcon<tauri::Wry>>>,
+    #[cfg(target_os = "macos")]
+    pub previous_app: Arc<Mutex<Option<String>>>,
 }
 
 #[tauri::command]
@@ -134,32 +136,55 @@ pub async fn paste_clip<R: Runtime>(
         }
     }
     let _ = window.hide();
-    // Deactivate BuffBrain so macOS restores focus to the previous app,
-    // then send Cmd+V to paste the clipboard contents there.
     #[cfg(target_os = "macos")]
     {
-        std::thread::spawn(|| {
-            std::thread::sleep(std::time::Duration::from_millis(50));
-            // Cmd+H hides the entire app → macOS auto-activates the previous app
-            // Then Cmd+V pastes into whatever is now frontmost
+        // Restore focus to the app that was frontmost when the user triggered
+        // the global shortcut, then send Cmd+V so the pasted text lands there.
+        let state = app.state::<AppState>();
+        let previous_app = state
+            .previous_app
+            .lock()
+            .ok()
+            .and_then(|g| g.clone());
+
+        if let Some(target_app) = previous_app {
+            let script = format!(
+                r#"tell application "{}"
+    activate
+end tell
+delay 0.1
+tell application "System Events" to keystroke "v" using command down"#,
+                target_app
+            );
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+                match std::process::Command::new("osascript")
+                    .args(&["-e", script.as_str()])
+                    .output()
+                {
+                    Ok(output) => {
+                        if !output.status.success() {
+                            eprintln!("[paste] osascript failed: {:?}",
+                                String::from_utf8_lossy(&output.stderr));
+                        }
+                    }
+                    Err(e) => eprintln!("[paste] osascript error: {}", e),
+                }
+            });
+        } else {
+            // Fallback: just deactivate and send Cmd+V
             let script = r#"tell application "System Events"
-                key code 4 using {command down}
-                delay 0.15
+                set frontmost of process "BuffBrain" to false
+                delay 0.1
                 keystroke "v" using command down
             end tell"#;
-            match std::process::Command::new("osascript")
-                .args(&["-e", script])
-                .output()
-            {
-                Ok(output) => {
-                    if !output.status.success() {
-                        eprintln!("[paste] osascript failed: {:?}",
-                            String::from_utf8_lossy(&output.stderr));
-                    }
-                }
-                Err(e) => eprintln!("[paste] osascript error: {}", e),
-            }
-        });
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+                let _ = std::process::Command::new("osascript")
+                    .args(&["-e", script])
+                    .output();
+            });
+        }
     }
     Ok(())
 }
@@ -334,6 +359,8 @@ fn state_get<R: Runtime>(app: &AppHandle<R>) -> Arc<AppState> {
         embedder: state.embedder.clone(),
         data_dir: state.data_dir.clone(),
         tray: Mutex::new(None),
+        #[cfg(target_os = "macos")]
+        previous_app: state.previous_app.clone(),
     })
 }
 

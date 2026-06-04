@@ -37,6 +37,18 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            {
+                use objc2_app_kit::NSApplication;
+                use objc2_foundation::MainThreadMarker;
+                if let Some(mtm) = MainThreadMarker::new() {
+                    let ns_app = NSApplication::sharedApplication(mtm);
+                    ns_app.setActivationPolicy(
+                        objc2_app_kit::NSApplicationActivationPolicy::Accessory,
+                    );
+                }
+            }
+
             let app_handle = app.handle().clone();
             let data_dir = app.path().app_data_dir().expect("no data dir");
             std::fs::create_dir_all(&data_dir).ok();
@@ -76,6 +88,8 @@ pub fn run() {
                 embedder,
                 data_dir: data_dir.clone(),
                 tray: Mutex::new(None),
+                #[cfg(target_os = "macos")]
+                previous_app: Arc::new(Mutex::new(None)),
             };
             app.manage(state);
 
@@ -219,6 +233,26 @@ fn toggle_window<R: Runtime>(app: &tauri::AppHandle<R>) {
         if window.is_visible().unwrap_or(false) {
             let _ = window.hide();
         } else {
+            #[cfg(target_os = "macos")]
+            {
+                // Capture the frontmost app BEFORE we take focus, so we can
+                // restore focus to it later when pasting.
+                if let Ok(output) = std::process::Command::new("osascript")
+                    .args(&["-e", r#"tell application "System Events" to get name of first application process whose frontmost is true"#])
+                    .output()
+                {
+                    if let Ok(name) = String::from_utf8(output.stdout) {
+                        let trimmed = name.trim().to_string();
+                        if !trimmed.is_empty() && trimmed != "BuffBrain" {
+                            if let Some(state) = app.try_state::<AppState>() {
+                                if let Ok(mut prev) = state.previous_app.lock() {
+                                    *prev = Some(trimmed);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             commands::position_window_top_center(&window);
             let _ = window.show();
             let _ = window.set_focus();
